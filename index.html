@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>si-didy-cascade · L1 upgrade · fall-cascade + mesh cache-first</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0b0a0f">
+<style>
+  :root{
+    --ox:#8b1a1a; --brass:#b8974a; --cream:#c4bfb2; --void:#0b0a0f;
+    --ink:#e8e3d6; --dim:#8a857a; --green:#6a8a5a; --line:#2a2823;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--void);color:var(--ink);font-family:'DM Sans',system-ui,sans-serif;font-size:15px;line-height:1.5;min-height:100vh}
+  body{background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(139,26,26,.12), transparent 60%),
+    radial-gradient(900px 500px at 100% 100%, rgba(184,151,74,.08), transparent 60%),
+    var(--void)}
+  header{padding:2rem 1.5rem 1rem;max-width:1100px;margin:0 auto}
+  h1{font-family:'Libre Baskerville',Georgia,serif;font-weight:400;letter-spacing:.02em;margin:0 0 .3rem;color:var(--cream);font-size:1.8rem}
+  h1 .k{color:var(--brass)}
+  .sub{color:var(--dim);font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:.85rem}
+  main{max-width:1100px;margin:0 auto;padding:1rem 1.5rem 4rem}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem;margin-bottom:1.5rem}
+  .card{background:rgba(20,18,24,.6);border:1px solid var(--line);border-radius:6px;padding:1rem 1.1rem}
+  .card h3{margin:0 0 .5rem;font-family:'IBM Plex Mono',monospace;font-size:.8rem;text-transform:uppercase;letter-spacing:.15em;color:var(--brass);font-weight:500}
+  .big{font-family:'Libre Baskerville',serif;font-size:2rem;color:var(--cream);letter-spacing:.02em}
+  .row{display:flex;justify-content:space-between;align-items:baseline;font-size:.9rem;color:var(--dim);border-top:1px dashed var(--line);padding-top:.4rem;margin-top:.4rem}
+  .row:first-of-type{border-top:none;margin-top:0;padding-top:0}
+  .row b{color:var(--ink);font-weight:500}
+  .bar{height:8px;background:#1a1820;border-radius:4px;overflow:hidden;margin-top:.5rem;display:flex}
+  .bar span{display:block;height:100%}
+  .t0{background:var(--green)}.t2{background:var(--brass)}.t3{background:var(--ox)}
+  .legend{display:flex;gap:.8rem;font-size:.72rem;color:var(--dim);font-family:'IBM Plex Mono',monospace;margin-top:.4rem;flex-wrap:wrap}
+  .legend span::before{content:'■ ';margin-right:.2rem}
+  .legend .t0-l::before{color:var(--green)}.legend .t2-l::before{color:var(--brass)}.legend .t3-l::before{color:var(--ox)}
+  textarea,input,select{width:100%;background:#0f0d13;border:1px solid var(--line);color:var(--ink);padding:.6rem .7rem;border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:.85rem}
+  textarea{min-height:100px;resize:vertical;font-family:inherit;font-size:.95rem}
+  button{background:var(--ox);color:var(--cream);border:none;padding:.6rem 1.2rem;border-radius:4px;font-family:inherit;font-size:.9rem;cursor:pointer;letter-spacing:.03em}
+  button:hover{background:#a52222}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--cream)}
+  button.ghost:hover{border-color:var(--brass)}
+  label{display:block;font-size:.75rem;text-transform:uppercase;letter-spacing:.12em;color:var(--dim);margin:0 0 .3rem;font-family:'IBM Plex Mono',monospace}
+  .field{margin-bottom:.8rem}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
+  .out{background:#08070c;border:1px solid var(--line);border-radius:4px;padding:.8rem;margin-top:.8rem;font-family:'IBM Plex Mono',monospace;font-size:.82rem;white-space:pre-wrap;color:var(--cream);max-height:280px;overflow:auto}
+  .pill{display:inline-block;padding:.15rem .55rem;border-radius:99px;font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase}
+  .pill.t0{background:rgba(106,138,90,.15);color:var(--green);border:1px solid var(--green)}
+  .pill.t2{background:rgba(184,151,74,.15);color:var(--brass);border:1px solid var(--brass)}
+  .pill.t3{background:rgba(139,26,26,.15);color:var(--ox);border:1px solid var(--ox)}
+  table{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:.78rem;margin-top:.5rem}
+  th,td{text-align:left;padding:.35rem .5rem;border-bottom:1px solid var(--line)}
+  th{color:var(--dim);text-transform:uppercase;letter-spacing:.1em;font-weight:500;font-size:.7rem}
+  td.src{color:var(--brass)}
+  footer{max-width:1100px;margin:2rem auto 1rem;padding:1rem 1.5rem;font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--dim);text-align:center;border-top:1px solid var(--line)}
+  .seal{color:var(--brass)}
+  .warn{color:var(--ox);font-size:.78rem;margin-top:.3rem}
+  a{color:var(--brass)}
+  section h2{font-family:'Libre Baskerville',serif;font-weight:400;color:var(--cream);font-size:1.2rem;margin:2rem 0 .8rem;border-bottom:1px solid var(--line);padding-bottom:.4rem}
+</style>
+</head>
+<body>
+<header>
+  <h1>si-didy-cascade <span class="k">◊·κ=φ⁴</span></h1>
+  <div class="sub">L1 upgrade · fall-cascade + mesh cache-first · every Claude call reduced · <span class="seal">PRIVATE</span></div>
+</header>
+
+<main>
+  <section>
+    <h2>Live cascade stats</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>Total routed</h3>
+        <div class="big" id="statTotal">0</div>
+        <div class="row"><span>T0 mechanical</span><b id="statT0">0</b></div>
+        <div class="row"><span>T2 WebLLM</span><b id="statT2">0</b></div>
+        <div class="row"><span>T3 Claude</span><b id="statT3">0</b></div>
+        <div class="bar" id="bar">
+          <span class="t0" style="width:0%"></span><span class="t2" style="width:0%"></span><span class="t3" style="width:0%"></span>
+        </div>
+        <div class="legend"><span class="t0-l">T0</span><span class="t2-l">T2</span><span class="t3-l">T3</span></div>
+      </div>
+      <div class="card">
+        <h3>Tokens saved · £/day</h3>
+        <div class="big" id="statTokens">0</div>
+        <div class="row"><span>est. £/day @ 10k calls</span><b id="statGbp">£0.00</b></div>
+        <div class="row"><span>vs pass-through baseline</span><b id="statPct">0%</b></div>
+      </div>
+      <div class="card">
+        <h3>Mesh cache hit rate</h3>
+        <div class="big" id="statCacheRate">0%</div>
+        <div class="row"><span>Cache hits</span><b id="statCache">0</b></div>
+        <div class="row"><span>Mesh channel</span><b id="statChan">niceassos-mesh</b></div>
+        <div class="row"><span>Recall deadline</span><b id="statDeadline">300ms</b></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Manual test panel</h2>
+    <div class="card">
+      <div class="field">
+        <label for="prompt">Prompt</label>
+        <textarea id="prompt" placeholder="Paste a prompt. si-didy-cascade will classify → try mesh cache → fall through to Claude only if nothing else answers."></textarea>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label for="force">Force tier (optional)</label>
+          <select id="force">
+            <option value="">auto (classify)</option>
+            <option value="T0">T0 · mechanical</option>
+            <option value="T2">T2 · WebLLM</option>
+            <option value="T3">T3 · Claude</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <button id="go">Route prompt</button>
+          <button class="ghost" id="clearCache" type="button">Clear cache</button>
+        </div>
+      </div>
+      <div id="result" class="out" style="display:none"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Configuration</h2>
+    <div class="card">
+      <div class="grid2">
+        <div class="field">
+          <label for="oauth">Anthropic OAuth token · never logged</label>
+          <input type="password" id="oauth" placeholder="sk-ant-...">
+          <div class="warn">Stored in memory only. Never printed. Never broadcast.</div>
+        </div>
+        <div class="field">
+          <label for="deadline">Mesh recall deadline (ms)</label>
+          <input type="number" id="deadline" value="300" min="50" max="2000" step="50">
+        </div>
+        <div class="field">
+          <label for="ttl">Cache TTL (hours)</label>
+          <input type="number" id="ttl" value="168" min="1">
+        </div>
+        <div class="field">
+          <label for="endpoint">Fallcompass endpoint</label>
+          <input type="text" id="endpoint" value="https://sjgant80-hub.github.io/fallcompass/fallcompass-shim.js">
+        </div>
+      </div>
+      <button id="save">Apply configuration</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Recent routes (last 20)</h2>
+    <div class="card">
+      <table id="recent">
+        <thead><tr><th>tier</th><th>source</th><th>ms</th><th>len</th><th>at</th></tr></thead>
+        <tbody id="recentBody"><tr><td colspan="5" style="color:var(--dim)">no calls yet · route a prompt above</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Integration hook</h2>
+    <div class="card">
+      <div class="out" style="display:block">
+import { SiDidyCascade } from 'https://sjgant80-hub.github.io/si-didy-cascade/si-didy-cascade.js';
+
+const cascade = new SiDidyCascade({
+  oauthToken: yourOauthTokenFromSiDidySession,
+  fallkitInstance: window.FallKit,        // optional · T2 lane
+  fallcompassInstance: window.FallCompass, // optional · classifier
+  meshDeadlineMs: 300,
+});
+
+// swap si-didy's fetch(anthropic) for:
+const { text, tier, source, ms, tokens_saved } = await cascade.route(prompt);</div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  ◊·κ=φ⁴ · prime 1289 · L1 sensor upgrade · niceassos-mesh v1 · MIT · Simon Gant · <span class="seal">PRIVATE</span>
+</footer>
+
+<script type="module">
+import { SiDidyCascade } from './si-didy-cascade.js';
+
+const cascade = new SiDidyCascade({
+  meshDeadlineMs: 300
+});
+window.cascade = cascade;
+
+function fmtMs(ts) {
+  const d = new Date(ts);
+  return d.toLocaleTimeString();
+}
+function renderStats() {
+  const s = cascade.getStats();
+  document.getElementById('statTotal').textContent = s.total;
+  document.getElementById('statT0').textContent = s.T0;
+  document.getElementById('statT2').textContent = s.T2;
+  document.getElementById('statT3').textContent = s.T3;
+  document.getElementById('statCache').textContent = s.cacheHits;
+  document.getElementById('statCacheRate').textContent = (s.cacheHitRate * 100).toFixed(1) + '%';
+  document.getElementById('statTokens').textContent = s.tokensSaved.toLocaleString();
+  // rough £/day at £15/M tokens Opus estimate, scaled to 10k calls
+  const perCall = s.total ? (s.tokensSaved / s.total) : 0;
+  const perDay = perCall * 10000 * 15 / 1e6;
+  document.getElementById('statGbp').textContent = '£' + perDay.toFixed(2);
+  const t3ratio = s.total ? (s.T3 / s.total) : 1;
+  const cut = Math.max(0, 1 - t3ratio + (s.cacheHitRate * t3ratio));
+  document.getElementById('statPct').textContent = (cut * 100).toFixed(0) + '%';
+  // bar
+  const bar = document.getElementById('bar');
+  const total = Math.max(s.total, 1);
+  bar.children[0].style.width = (s.T0 / total * 100) + '%';
+  bar.children[1].style.width = (s.T2 / total * 100) + '%';
+  bar.children[2].style.width = (s.T3 / total * 100) + '%';
+  // recent table
+  const body = document.getElementById('recentBody');
+  if (!s.recent.length) return;
+  body.innerHTML = s.recent.map(r =>
+    `<tr><td><span class="pill ${r.tier.toLowerCase()}">${r.tier}</span></td><td class="src">${r.source}</td><td>${r.ms}</td><td>${r.promptLen}</td><td>${fmtMs(r.at)}</td></tr>`
+  ).join('');
+}
+renderStats();
+
+document.getElementById('go').addEventListener('click', async () => {
+  const prompt = document.getElementById('prompt').value;
+  const force = document.getElementById('force').value;
+  const out = document.getElementById('result');
+  out.style.display = 'block';
+  out.textContent = 'routing...';
+  try {
+    const opts = force ? { forceTier: force } : {};
+    const r = await cascade.route(prompt, opts);
+    out.textContent = `tier: ${r.tier}\nsource: ${r.source}\nms: ${r.ms.toFixed(1)}\ntokens_saved (est): ${r.tokens_saved}\n\n---\n${r.text || '(no text — mechanical/empty)'}`;
+  } catch (e) {
+    out.textContent = 'error: ' + (e.message || String(e)).replace(/sk-ant-[A-Za-z0-9_-]+/g, '[REDACTED]');
+  }
+  renderStats();
+});
+
+document.getElementById('save').addEventListener('click', () => {
+  const tok = document.getElementById('oauth').value.trim();
+  const dl = parseInt(document.getElementById('deadline').value, 10) || 300;
+  const ttl = parseInt(document.getElementById('ttl').value, 10) || 168;
+  if (tok) cascade.setOauthToken(tok);
+  cascade.setMeshDeadline(dl);
+  cascade.setCacheTtl(ttl * 3600 * 1000);
+  document.getElementById('statDeadline').textContent = dl + 'ms';
+  document.getElementById('oauth').value = ''; // clear from DOM after apply
+  const btn = document.getElementById('save');
+  const orig = btn.textContent;
+  btn.textContent = 'applied ·';
+  setTimeout(() => btn.textContent = orig, 1200);
+});
+
+document.getElementById('clearCache').addEventListener('click', async () => {
+  indexedDB.deleteDatabase('si-didy-cascade');
+  const btn = document.getElementById('clearCache');
+  const orig = btn.textContent;
+  btn.textContent = 'cleared ·';
+  setTimeout(() => btn.textContent = orig, 1200);
+});
+
+// service worker (offline)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
