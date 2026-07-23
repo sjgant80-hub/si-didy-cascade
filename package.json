@@ -1,0 +1,16 @@
+{
+  "name": "si-didy-cascade",
+  "version": "1.0.0",
+  "description": "Client-side tiered router that classifies each prompt (T0 mechanical / T2 local / T3 remote) and serves cache-first, so only unavoidable prompts reach the remote model.",
+  "type": "module",
+  "main": "si-didy-cascade.js",
+  "exports": {
+    ".": "./si-didy-cascade.js"
+  },
+  "scripts": {
+    "test": "node test.mjs"
+  },
+  "author": "Simon Gant <sjgant80@gmail.com>",
+  "license": "MIT",
+  "private": true
+}
