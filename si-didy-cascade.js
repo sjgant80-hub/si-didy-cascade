@@ -12,6 +12,9 @@ const DEFAULT_MESH_DEADLINE_MS = 300;
 const DEFAULT_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7d
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 const ANTHROPIC_MODEL_DEFAULT = 'claude-opus-4-7';
+const OLLAMA_HOST_DEFAULT = 'http://localhost:11434';
+const OLLAMA_MODEL_DEFAULT = 'qwen2.5:7b';    // the workhorse: ~9s warm on ordinary hardware
+const OLLAMA_TIMEOUT_MS = 120000;
 const ANTHROPIC_MAX_TOKENS_DEFAULT = 1024;
 const IDB_NAME = 'si-didy-cascade';
 const IDB_STORE = 'recall';
@@ -95,13 +98,18 @@ export class SiDidyCascade {
     this.cacheTtlMs = opts.cacheTtlMs || DEFAULT_CACHE_TTL_MS;
     this.fallcompassEndpoint = opts.fallcompassEndpoint || 'https://sjgant80-hub.github.io/fallcompass/fallcompass-shim.js';
     this.channelName = opts.channelName || 'niceassos-mesh';
+    // T2.5 · a local model on the operator's own machine, tried BEFORE any paid call.
+    this.ollamaHost = opts.ollamaHost || OLLAMA_HOST_DEFAULT;
+    this.ollamaModel = opts.ollamaModel || OLLAMA_MODEL_DEFAULT;
+    this.ollamaEnabled = opts.ollamaEnabled !== false;   // on by default; local-first is the point
+    this.ollamaTimeoutMs = opts.ollamaTimeoutMs || OLLAMA_TIMEOUT_MS;
     this.forkPub = null;
     this.forkPriv = null;
     this._seq = 0;
     this._prevHash = null;
     this._pending = new Map(); // queryHash -> resolver
     this._channel = null;
-    this._stats = { T0: 0, T2: 0, T3: 0, cacheHits: 0, tokensSaved: 0, calls: [] };
+    this._stats = { T0: 0, T2: 0, 'T2.5': 0, T3: 0, cacheHits: 0, tokensSaved: 0, calls: [] };
     this._ready = this._init();
   }
 
@@ -180,12 +188,58 @@ export class SiDidyCascade {
       return { text: meshHit.tokens, tier: 'T3', source: 'cache-mesh', ms, tokens_saved: this._estTokens(prompt) + this._estTokens(meshHit.tokens) };
     }
 
-    // 5 · fall through to Claude
+    // 5 · T2.5 · the operator's own local model, tried BEFORE anything paid leaves the machine.
+    //     Declines (returns null) if the host is down or the model is absent, so a missing local
+    //     runtime degrades to the previous behaviour rather than breaking the cascade.
+    const localText = await this._tryOllama(prompt, opts);
+    if (localText) {
+      await this._cache(prompt, hash, localText);
+      const msLocal = performance.now() - t0;
+      this._record('T2.5', 'ollama', msLocal, prompt.length);
+      return { text: localText, tier: 'T2.5', source: 'ollama', ms: msLocal, tokens_saved: this._estTokens(prompt) + this._estTokens(localText) };
+    }
+
+    // 6 · fall through to Claude — only reached when nothing local could answer
     const claudeText = await this._callClaude(prompt, opts);
     await this._cache(prompt, hash, claudeText);
     const ms = performance.now() - t0;
     this._record('T3', 'claude', ms, prompt.length);
     return { text: claudeText, tier: 'T3', source: 'claude', ms, tokens_saved: 0 };
+  }
+
+  // ───────────────────────────────────────────────────────────────── ollama ──
+  // A local model on the operator's machine. Returns the answer, or null to decline — never throws,
+  // so an absent or sleeping Ollama simply falls through to the next tier.
+  async _tryOllama(prompt, opts = {}) {
+    if (!this.ollamaEnabled || opts.noLocal) return null;
+    const model = opts.ollamaModel || this.ollamaModel;
+    try {
+      const body = { model, prompt: String(prompt), stream: false, options: { temperature: 0 } };
+      if (opts.system) body.system = String(opts.system);
+      const res = await fetch(this.ollamaHost + '/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout ? AbortSignal.timeout(this.ollamaTimeoutMs) : undefined,
+      });
+      if (!res || !res.ok) return null;
+      const j = await res.json();
+      const text = j && typeof j.response === 'string' ? j.response.trim() : '';
+      return text || null;
+    } catch (_) { return null; }
+  }
+
+  // Is a local model actually available? For honest reporting in a UI rather than assuming a tier.
+  async probeLocal() {
+    try {
+      const res = await fetch(this.ollamaHost + '/api/tags', {
+        signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : undefined,
+      });
+      if (!res || !res.ok) return { up: false, models: [], hasModel: false };
+      const j = await res.json();
+      const models = Array.isArray(j && j.models) ? j.models.map(m => m.name) : [];
+      return { up: true, models, hasModel: models.includes(this.ollamaModel) };
+    } catch (_) { return { up: false, models: [], hasModel: false }; }
   }
 
   // ─────────────────────────────────────────────────────────────── classify ──
