@@ -1,5 +1,5 @@
 /* si-didy-cascade sw · offline shell */
-const CACHE = 'si-didy-cascade-v1';
+const CACHE = 'si-didy-cascade-v2-ollama';
 const ASSETS = ['./', './index.html', './si-didy-cascade.js', './manifest.webmanifest'];
 
 self.addEventListener('install', e => {
