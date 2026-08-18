@@ -1,0 +1,22 @@
+[
+  {
+    "mutation": "< → <=",
+    "snippet": "for (let i = 0; i < out.length; i++) out[i] = parseInt(s.substr(i * 2, 2), 16);",
+    "reason": "typed-array OOB write is silently discarded: <= reads substr past the end (empty string), parseInt gives NaN, and the write to out[out.length] — one past the end of a fixed-length Uint8Array — is dropped by spec. Every byte that matters is identical."
+  },
+  {
+    "mutation": "&& → ||",
+    "snippet": "const text = j && typeof j.response === 'string' ? j.response.trim() : '';",
+    "reason": "equivalent via the enclosing catch: when j is truthy both forms take the same path; when j is falsy the mutant throws reading j.response inside the try and the catch returns the same null the original reaches via the empty string. No input separates them."
+  },
+  {
+    "mutation": "&& → ||",
+    "snippet": "if (this.fallcompassInstance && typeof this.fallcompassInstance.classify === 'function') {",
+    "reason": "equivalent via the enclosing catch: with no instance the mutant throws reading .classify of null inside the try at line 248, and the catch falls through to the same heuristic; with an instance lacking classify it throws calling a non-function — same fall-through. With a working instance both forms call it."
+  },
+  {
+    "mutation": "&& → ||",
+    "snippet": "if (this.forkPriv && typeof this.forkPriv !== 'string') {",
+    "reason": "equivalent via the enclosing catch: forkPriv is a CryptoKey (both forms sign), null (original skips → empty signature; mutant calls sign(null) which throws and the catch sets the same empty signature), or a hex string (original skips; mutant throws signing with a string — same catch, same empty signature). Every arm converges."
+  }
+]
